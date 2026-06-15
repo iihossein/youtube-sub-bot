@@ -1,0 +1,7 @@
+python-telegram-bot[job-queue]==21.6
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+yt-dlp==2024.10.22
+deep-translator==1.11.4
+webvtt-py==0.5.1
+python-dotenv==1.0.1
