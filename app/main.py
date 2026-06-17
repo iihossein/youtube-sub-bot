@@ -1,20 +1,28 @@
-from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
 
+from fastapi import FastAPI, Request
 from telegram import Update
 
 from app.bot.application import telegram_app
 from app.bot.webhook import set_webhook
 
 
-app = FastAPI(
-    title="YouTube Subtitle Bot"
-)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
 
-
-@app.on_event("startup")
-async def startup_event():
+    await telegram_app.initialize()
 
     await set_webhook()
+
+    yield
+
+    await telegram_app.shutdown()
+
+
+app = FastAPI(
+    title="YouTube Subtitle Bot",
+    lifespan=lifespan
+)
 
 
 @app.get("/")
