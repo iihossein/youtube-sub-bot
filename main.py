@@ -4,27 +4,59 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from dotenv import load_dotenv
+from telegram import Update
+from telegram.ext import Application
 
-# تنظیم اولیه
+# هندلرهای ربات را از پکیج bot وارد می‌کنیم
+from bot.handlers import setup_handlers
+
+# بارگذاری متغیرهای محیطی
 load_dotenv()
 
-# تنظیمات لاگ (در Render مفید است)
+# تنظیمات لاگ
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# تعریف Lifespan برای مدیریت چرخه حیات FastAPI
+# تعریف lifespan برای مدیریت چرخه حیات FastAPI
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """در اینجا کارهای شروع و پایان را انجام می‌دهیم (مثلاً تنظیم webhook)"""
-    logger.info("Application startup")
-    # بعداً بات را راه‌اندازی می‌کنیم
-    yield
-    logger.info("Application shutdown")
+    """ایجاد Application ربات، تنظیم و پاک‌سازی webhook"""
+    # توکن و آدرس webhook از env
+    bot_token = os.getenv("BOT_TOKEN")
+    webhook_url = os.getenv("WEBHOOK_URL")
+    if not bot_token or not webhook_url:
+        raise ValueError("BOT_TOKEN and WEBHOOK_URL must be set")
 
-# ساخت اپلیکیشن FastAPI
+    # ساخت Application ربات
+    application = Application.builder().token(bot_token).build()
+
+    # اضافه کردن هندلرها
+    setup_handlers(application)
+
+    # ذخیره application در state برنامه FastAPI (برای دسترسی در endpoint)
+    app.state.telegram_app = application
+
+    # تنظیم webhook هنگام شروع
+    await application.bot.set_webhook(url=webhook_url)
+    logger.info(f"Webhook set to {webhook_url}")
+
+    # شروع Application (برای job_queue و ...)
+    await application.initialize()
+    await application.start()
+
+    yield   # <--- سرور در اینجا اجرا می‌شود
+
+    # عملیات هنگام shutdown
+    logger.info("Shutting down bot")
+    await application.stop()
+    await application.shutdown()
+    await application.bot.delete_webhook()
+    logger.info("Webhook removed")
+
+# ساخت اپلیکیشن FastAPI با lifespan
 app = FastAPI(lifespan=lifespan)
 
 @app.get("/")
@@ -33,9 +65,9 @@ async def root():
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    """تلگرام پیام‌ها را به این مسیر POST می‌کند."""
-    # فعلاً فقط داده را می‌خوانیم
+    """تلگرام آپدیت‌ها را به اینجا POST می‌کند."""
     data = await request.json()
-    logger.info(f"Received update: {data}")
-    # بعداً اینجا منطق بات قرار می‌گیرد
+    update = Update.de_json(data, app.state.telegram_app.bot)
+    # پردازش آپدیت به صورت async
+    await app.state.telegram_app.process_update(update)
     return Response(status_code=200)
