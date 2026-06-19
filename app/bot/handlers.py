@@ -1,5 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+from app.services.youtube_service import YouTubeService
 
 
 async def start_command( update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -8,10 +9,33 @@ async def start_command( update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def message_handler(update, context):
 
-    text = update.message.text
-    
-    await update.message.reply_text(
-        f"لینک دریافت شد:\n{text}"
-    )
+    url = update.message.text
+
+    try:
+
+        video_info = (
+            YouTubeService
+            .get_video_info(url)
+        )
+
+        title = video_info.get(
+            "title",
+            "Unknown"
+        )
+
+        duration = video_info.get(
+            "duration",
+            0
+        )
+
+        await update.message.reply_text(
+            f"🎬 {title}\n⏱ {duration} ثانیه"
+        )
+
+    except Exception as error:
+
+        await update.message.reply_text(
+            f"خطا:\n{error}"
+        )
