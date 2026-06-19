@@ -1,21 +1,17 @@
-from yt_dlp import YoutubeDL
+from youtube_transcript_api import YouTubeTranscriptApi
 
 
 class YouTubeService:
 
     @staticmethod
-    def get_video_info(url: str):
+    def get_farsi_subtitle(video_id: str):
 
-        options = {
-            "quiet": True,
-            "skip_download": True
-        }
-
-        with YoutubeDL(options) as ydl:
-
-            info = ydl.extract_info(
-                url,
-                download=False
+        transcript = (
+            YouTubeTranscriptApi
+            .get_transcript(
+                video_id,
+                languages=["fa"]
             )
+        )
 
-        return info
+        return transcript
