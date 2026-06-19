@@ -25,7 +25,7 @@ telegram_app.add_handler(
 
 telegram_app.add_handler(
     MessageHandler(
-        filters.Text & ~filters.Command,
+        filters.Text & ~filters.COMMAND,
         message_handler
     )
 )
