@@ -1,10 +1,13 @@
 from telegram.ext import (
     Application,
-    CommandHandler
+    CommandHandler,
+    MessageHandler,
+    filters
 )
 
 from app.config import BOT_TOKEN
 from app.bot.handlers import start_command
+from app.bot.handlers import message_handler
 
 
 telegram_app = (
@@ -17,5 +20,12 @@ telegram_app.add_handler(
     CommandHandler(
         "start",
         start_command
+    )
+)
+
+telegram_app.add_handler(
+    MessageHandler(
+        filters.Text & ~filters.Command,
+        message_handler
     )
 )
